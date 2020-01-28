@@ -818,3 +818,28 @@ with open('cars.csv') as f:
     origin = row.strip('\n').split(';')[-1]
     origins.add(origin)
 ```
+
+
+### 8. Check if an object is iterable:
+Need to check if the class has implemented either __getitem__ or __iter__ contract. For example `print('__iter__' in dir(SimpleIterable))`. 
+
+If a class has implemented __iter__, but don't return an iterator, you will get `TypeError: 'type' object is not iterable`
+```py
+class SimpleIterable:
+    def __iter__(self):
+        return 'Nope'
+
+print('__iter__' in dir(SimpleIterable)) # True
+
+for i in SimpleIterable: # TypeError: 'type' object is not iterable
+    print(i)
+
+# use try-catch to avoid error when necessary
+try:
+    for i in SimpleIterable: # TypeError: 'type' object is not iterable
+        print(i)
+except TypeError:
+    print('not iterable')
+```
+
+### 9.
