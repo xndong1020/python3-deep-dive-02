@@ -819,11 +819,82 @@ with open('cars.csv') as f:
     origins.add(origin)
 ```
 
+### 8. `iter()` function
 
-### 8. Check if an object is iterable:
-Need to check if the class has implemented either __getitem__ or __iter__ contract. For example `print('__iter__' in dir(SimpleIterable))`. 
+When you iterate over an iterable, the first thing Python will do, is always call the iter() function on the object that we want to iterate
 
-If a class has implemented __iter__, but don't return an iterator, you will get `TypeError: 'type' object is not iterable`
+When `iter(obj)` is called, Python fist looks for an `__iter__` method, which will return an iterator.
+
+On the other hand, iter() function doesn't always call the \_\_iter\_\_ method. if the object that only implements \_\_getitem\_\_ method, then the \_\_getitem\_\_ method is called
+
+- if `__getitem__` is found, create an iterator object and return it
+- if not found, raise a TypeError exception (not iterable)
+
+```py
+"""
+For sequence type, __iter__ method may not be implemented.
+In stead, __getitem__ method is used to create iterator
+"""
+
+class Squares:
+    def __init__(self, length):
+        self._length = length
+
+    def __len__(self):
+        return self._length
+
+    def __getitem__(self, idx):
+        if idx >= self._length:
+            raise IndexError
+
+        return idx ** 2
+
+
+square = Squares(5)
+square_iter = iter(square)
+
+print(square_iter)  # <iterator object at 0x000002DDFED00DC0>
+print(list(square_iter))  # [0, 1, 4, 9, 16]
+
+next(square_iter)  # StopIteration
+```
+
+When `__getitem__` method is called, Python created an iterator object for us, same as `__iter__`
+
+we can write an Iterator class to iterate any sequence type:
+
+```py
+class SequenceIterator:
+    def __init__(self, sequence):
+        self._sequence = sequence
+        self._idx = 0
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        if self._idx >= len(self._sequence):
+            raise StopIteration
+        else:
+            elem = self._sequence[self._idx]
+            self._idx += 1
+            return elem
+
+
+square = [1, 2, 3, 4, 5]
+square_iter = iter(SequenceIterator(square))
+
+print(square_iter)  # <__main__.SequenceIterator object at 0x000001D3D11809A0>
+
+print(list(square_iter))  # [1, 2, 3, 4, 5]
+```
+
+### 8a. Check if an object is iterable:
+
+Need to check if the class has implemented either **getitem** or **iter** contract. For example `print('__iter__' in dir(SimpleIterable))`.
+
+If a class has implemented **iter**, but don't return an iterator, you will get `TypeError: 'type' object is not iterable`
+
 ```py
 class SimpleIterable:
     def __iter__(self):
@@ -842,4 +913,246 @@ except TypeError:
     print('not iterable')
 ```
 
-### 9.
+### 9. Creating an iterator using callable
+
+This is the second way of creating an iterator, that is using the second form of iter function, which requires a callable, and a stop value (sentinel value)
+
+Source code of `__iter__` method:
+
+```py
+@overload
+def iter(__iterable: Iterable[_T]) -> Iterator[_T]: ...
+@overload
+def iter(__function: Callable[[], _T], __sentinel: _T) -> Iterator[_T]: ...
+```
+
+we can create an iterator by use this way:
+
+```py
+def counter():
+    i = 0
+
+    def inc():
+        nonlocal i
+        i += 1
+        return i
+
+    return inc
+
+
+class CounterIterator:
+    def __init__(self, counter_callable, sentinel):
+        self._counter_callable = counter_callable
+        self._sentinel = sentinel
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        result = self._counter_callable()
+        if result == self._sentinel:
+            raise StopIteration
+        else:
+            return result
+
+
+counter = counter()  # returns inc() function, with 'i' as its closure
+print(counter)  # <function counter.<locals>.inc at 0x0000023109FEDB80>
+counter_iter = CounterIterator(counter, 5)
+print(counter_iter)  # <__main__.CounterIterator object at 0x0000026EBD5C8DF0>
+
+[print(i) for i in counter_iter]
+
+"""
+1
+2
+3
+4
+"""
+```
+
+But be `careful` if you use callable to create an iterator. See below example:
+
+- counter_iter will not consumed, just skip sentinel value
+- if you call counter() before creating `counter_iter`, the closure of counter() is changed
+
+```py
+def counter():
+    i = 0
+
+    def inc():
+        nonlocal i
+        i += 1
+        return i
+
+    return inc
+
+
+class CounterIterator:
+    def __init__(self, counter_callable, sentinel):
+        self._counter_callable = counter_callable
+        self._sentinel = sentinel
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        result = self._counter_callable()
+        if result == self._sentinel:
+            raise StopIteration
+        else:
+            return result
+
+
+counter = counter()  # returns inc() function, with 'i' as its closure
+print(counter)  # <function counter.<locals>.inc at 0x0000023109FEDB80>
+
+counter()  # closure i changed to 1
+counter()  # closure i changed to 2
+
+# # now the counter function closure is 3
+counter_iter = CounterIterator(counter, 5)
+print(counter_iter)  # <__main__.CounterIterator object at 0x0000026EBD5C8DF0>
+
+for i in counter_iter:
+    print(i)
+
+print(next(counter_iter))  # 6
+
+"""
+3
+4
+6
+"""
+
+```
+
+To fix problem 1: counter_iter will not consumed, just skip sentinel value
+
+```py
+def counter():
+    i = 0
+
+    def inc():
+        nonlocal i
+        i += 1
+        return i
+
+    return inc
+
+
+class CounterIterator:
+    def __init__(self, counter_callable, sentinel):
+        self._counter_callable = counter_callable
+        self._sentinel = sentinel
+        self.is_consumed = False
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        if self.is_consumed:
+            raise StopIteration
+
+        result = self._counter_callable()
+        if result == self._sentinel:
+            self.is_consumed = True
+            raise StopIteration
+        else:
+            return result
+
+
+counter = counter()  # returns inc() function, with 'i' as its closure
+# # now the counter function closure is 3
+counter_iter = CounterIterator(counter, 5)
+
+for i in counter_iter:
+    print(i)
+
+print(next(counter_iter))  # StopIteration
+
+"""
+1
+2
+3
+4
+
+StopIteration
+"""
+```
+
+We can use the built-in `iter()` method overloaded version 2, to achieve the same result:
+**Note**:
+
+- When we use the first way of creating iterable, the return object type of iter(iterable) will be `iterator`
+- When we use the second way of creating iterable, the return object type of iter(callable, sentinel) will be `callable_iterator`
+
+```py
+def counter():
+    i = 0
+
+    def inc():
+        nonlocal i
+        i += 1
+        return i
+
+    return inc
+
+
+counter = counter()  # returns inc() function, with 'i' as its closure
+
+# now the counter function closure is 4
+counter_iter = iter(counter, 5)
+print(counter_iter)  # <callable_iterator object at 0x0000029AB3B28DF0>
+
+[print(i) for i in counter_iter]
+"""
+1
+2
+3
+4
+"""
+print(next(counter_iter))  # StopIteration
+```
+
+Below are 2 examples:
+
+1. Generate a random number, which value cannot be equal to 8:
+
+```py
+import random
+
+random_iter = iter(lambda: random.randint(0, 10), 8)  # random number cannot equal to 8
+
+for num in random_iter:
+    print(num)
+
+```
+
+2. a countdown from 5 until reach 0
+
+```py
+def countdown():
+    start = 6
+
+    def dec():
+        nonlocal start
+        start -= 1
+        return start
+
+    return dec
+
+
+countdown_iter = iter(countdown(), 0)
+
+for i in countdown_iter:
+    print(i)
+
+"""
+5
+4
+3
+2
+1
+"""
+```
