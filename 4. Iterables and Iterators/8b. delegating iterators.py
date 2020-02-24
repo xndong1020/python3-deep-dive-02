@@ -8,8 +8,7 @@ class PersonNames:
     def __init__(self, persons):
         try:
             self._persons = [
-                f"{person.first.capitalize()} {person.last.capitalize()}"
-                for person in persons
+                f"{person.first.capitalize()} {person.last.capitalize()}" for person in persons
             ]
         except (
             TypeError,

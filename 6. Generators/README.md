@@ -60,3 +60,4 @@ Generators:
    - it yields the value, then it suspends itself
    - until next is called again -> suspended function resumes execution
    - if it encounters a return statement (or reach the end of the function, which implicitly returns `None`), we got a StopIteration exception, and the return value is the exception message
+

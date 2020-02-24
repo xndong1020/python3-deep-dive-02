@@ -4,20 +4,12 @@ s = {1, 2, "x"}
 
 
 # tuple is immutable
-t = (
-    1,
-    2,
-    3,
-)
+t = (1, 2, 3)
 
 # t[1] = 4 # TypeError: 'tuple' object does not support item assignment
 
 # but you can do something like
-s = (
-    [0, 0],
-    2,
-    4,
-)
+s = ([0, 0], 2, 4)
 s[0][1] = 100  # ([0, 100], 2, 4)
 
 

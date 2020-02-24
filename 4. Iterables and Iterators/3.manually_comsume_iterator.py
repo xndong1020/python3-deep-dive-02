@@ -53,9 +53,7 @@ def cast_data_type(data_type, value):
 def cast_row(data_types, data_row):
     # return [cast_data_type(data_types[idx], data) for idx, data in enumerate(data_row)]
     # or another way of doing the same thing
-    return [
-        cast_data_type(data_type, data) for data_type, data in zip(data_types, data_row)
-    ]
+    return [cast_data_type(data_type, data) for data_type, data in zip(data_types, data_row)]
 
 
 cars_data = []
@@ -69,10 +67,7 @@ with open(f"{os.path.dirname(__file__)}/cars.csv") as file:
     Car = namedtuple("Car", columns)  #  Declaring namedtuple
 
     # start to read the remaining lines
-    cars_data = [
-        Car(*cast_row(data_types, line.strip("\n").split(";")))
-        for line in file_iterator
-    ]
+    cars_data = [Car(*cast_row(data_types, line.strip("\n").split(";"))) for line in file_iterator]
 
 
 print(cars_data)
