@@ -65,3 +65,18 @@ for _ in range(5):
     print(next(cycled))
 
 # a b c a b
+
+from itertools import repeat
+
+# infinite iterator
+infinite_spam = repeat("spam")  # Lazy iterator
+
+for _ in range(10):
+    print(next(infinite_spam))
+
+# spam spam spam spam spam spam spam spam spam spam
+
+# Optionally, you can specify a count to make the iterator finite
+finite_spam = repeat("spam", 3)
+
+print(list(finite_spam))  # ['spam', 'spam', 'spam']

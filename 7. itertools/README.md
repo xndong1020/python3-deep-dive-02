@@ -249,7 +249,7 @@ print(takes2)  # <itertools.dropwhile object at 0x10d072140>
 print(list(takes2)) # [88, 3, 100]
 ```
 
-#### Infinite Iterators
+#### 4. Infinite Iterators
 
 ##### itertools.count()
 
@@ -324,6 +324,11 @@ for _ in range(10):
 
 `cycle(finite_iterable)` function loop over a finite iterable indefinitely
 
+Note:
+
+1. If the argument of cycle() is an iterator, and this iterator becomes exhausted, cycle() method **will still** produce an infinite sequence.
+2. cycle() will NOT repeat iterable itself for n times, instead it will repeat the elements from the iterable, for n times.
+
 ```py
 from itertools import cycle
 
@@ -335,3 +340,124 @@ for _ in range(5):
 
 # a b c a b
 ```
+
+##### itertools.repeat()
+
+The `repeat(elem [,n])` function simply yields the same value indefinitely.
+repeat(10, 3) --> 10 10 10
+
+**Caveat**: The item yielded by `repeat()` are the **same object**, they each reference the **same object in memory**
+
+```py
+from itertools import repeat
+
+# infinite iterator
+infinite_spam = repeat("spam")  # Lazy iterator
+
+for _ in range(10):
+    print(next(infinite_spam))
+
+# spam spam spam spam spam spam spam spam spam spam
+
+# Optionally, you can specify a count to make the iterator finite
+finite_spam = repeat("spam", 3)
+
+print(list(finite_spam))  # ['spam', 'spam', 'spam']
+```
+
+| **Iterator** | **Arguments** | **Results**                                    | **Example**                           |
+| ------------ | ------------- | ---------------------------------------------- | ------------------------------------- |
+| count()      | start, [step] | start, start+step, start+2\*step, …            | count(10) --> 10 11 12 13 14 ...      |
+| cycle()      | p             | p0, p1, … plast, p0, p1, …                     | cycle('ABCD') --> A B C D A B C D ... |
+| repeat()     | elem [,n]     | elem, elem, elem, … endlessly or up to n times | repeat(10, 3) --> 10 10 10            |
+
+#### 5a. Chaining
+
+`itertools.chain(*args)` takes variable number of positional arguments, and each argument themselves should be **iterables**, and it will return a **lazy iterator**
+
+Make an iterator that returns elements from the first iterable until it is exhausted, then proceeds to the next iterable, until all of the iterables are exhausted. Used for treating consecutive sequences as a single sequence.
+
+This is analogous to sequence concatenation (eg. [1,2] + [3, 4] + [5], which gives us [1, 2, 3, 4, 5]), but not the same!!
+
+1. chaining dealing with iterables(including iterators)
+2. chaining is itself a lazy iterator
+
+```py
+from itertools import repeat
+
+iter1 = [1, 2, 3]  # sequence
+iter2 = repeat("spam", 3)  # lazy iterator
+iter3 = (5, 6)  # tuple
+
+# manually chain iterables
+def chain_(*args):
+    for itor in args:
+        yield from itor
+
+
+itor = chain_(iter1, iter2, iter3)
+
+print(itor)  # <generator object chain_ at 0x0000023DA6085660>
+print(list(itor))  # [1, 2, 3, 'spam', 'spam', 'spam', 5, 6]
+```
+
+Or, we can use itertools.chain(), or itertools.chain.from_iterable()
+
+```py
+# use chain as follows:
+iter1 = [1, 2, 3]  # sequence
+iter2 = repeat("spam", 3)  # lazy iterator
+iter3 = (5, 6)  # tuple
+
+...
+
+from itertools import chain
+
+iter2 = repeat("spam", 3)  # iter2 was exhausted in previous code
+lazy_itor = chain(iter1, iter2, iter3)
+
+iter2 = repeat("spam", 3)  # iter2 was exhausted in previous code
+lazy_itor02 = chain.from_iterable([iter1, iter2, iter3])
+
+print(list(lazy_itor))  # [1, 2, 3, 'spam', 'spam', 'spam', 5, 6]
+print(list(lazy_itor02))  # [1, 2, 3, 'spam', 'spam', 'spam', 5, 6]
+```
+
+`chain.from_iterable()` takes exactly 1 argument, which is an iterable of iterables.
+Why use chain.from_iterable([iter1, iter2, iter3]) ??
+
+Caveat: if l = [iter1, iter2, iter3], then we cannot use chain() directly, as chain() method is expecting variable number of iterables.
+We could do chain(\*l), and this will work. However, **unpacking is eager, not lazy!**. This could be a problem if we really wanted the entire chaining process to be lazy.
+
+We can manually create \_from_iterable()
+
+```py
+# manually create from_iterable
+iter1 = [1, 2, 3]  # sequence
+iter2 = repeat("spam", 3)  # lazy iterator
+iter3 = (5, 6)  # tuple
+
+def _from_iterable(it):
+    for sub_it in it:
+        yield from sub_it
+
+
+lazy_iter03 = _from_iterable([iter1, iter2, iter3])
+
+print(list(lazy_iter03))  # [1, 2, 3, 'spam', 'spam', 'spam', 5, 6]
+```
+
+`chain.from_iterable(it)` iterates lazily over it, then in turn, iterates lazily over each iterable in it.
+
+#### 5b. teeing
+
+`teeing(iterable, n)` returns **independent** iterables in a tuple
+eg.
+tee(iterable, 10) -> (iter1, iter2, ..., iter10)
+
+iter1, iter2, ..., iter10 are **all different objects**
+
+The elements of the returned tuple are lazy iterators, even if the original argument (eg. [1, 2, 3]) was not a lazy iterator.
+
+l = [1, 2, 3]
+tee(l, 3) -> (iter1, iter2, iter3), all iter1, iter2, iter3 are lazy iterators, not lists!!
