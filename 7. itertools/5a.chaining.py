@@ -39,4 +39,3 @@ iter2 = repeat("spam", 3)  # iter2 was exhausted in previous code
 lazy_iter03 = _from_iterable([iter1, iter2, iter3])
 
 print(list(lazy_iter03))  # [1, 2, 3, 'spam', 'spam', 'spam', 5, 6]
-

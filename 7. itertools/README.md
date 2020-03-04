@@ -461,3 +461,168 @@ The elements of the returned tuple are lazy iterators, even if the original argu
 
 l = [1, 2, 3]
 tee(l, 3) -> (iter1, iter2, iter3), all iter1, iter2, iter3 are lazy iterators, not lists!!
+
+
+#### 6. Mapping and Reducing
+##### Mapping and Accumulation
+
+Mapping  ---->  applying a callback to each element of an iterable
+`map(fn, iterable)`
+
+
+Accumulation -----> reducing an iterable to a single value
+`sum(iterable)` calculate the sum of every element in an iterable
+`min(iterable)` returns the minimal element of the iterable
+`max(iterable)` returns the maximal element of the iterable
+
+`reduce(fn, iterable, [initializer])`  is used to apply a particular function passed in its argument to all of the list elements mentioned in the sequence passed along.
+
+```py
+l = [1, 2, 3, 4]
+# x is accumulator, y is current element
+reduce(lambda x, y: x + y, l)
+
+step 1: 
+current is 1, accumulator is 0 ----> accumulator = 1 + 0 = 1
+step 2: 
+current is 2, accumulator is 1 ----> accumulator = 1 + 2 = 3
+step 3: 
+current is 3, accumulator is 3 ----> accumulator = 3 + 3 = 6
+step 4: 
+current is 4, accumulator is 6 ----> accumulator = 4 + 6 = 10
+
+
+
+# if reduce has a initial value
+# x is accumulator, y is current element
+reduce(lambda x, y: x + y, l, 100)
+
+step 1: 
+current is 1, accumulator is 100 ----> accumulator = 1 + 100 = 101
+step 2: 
+current is 2, accumulator is 101 ----> accumulator = 2 + 101 = 103
+step 3: 
+current is 3, accumulator is 103 ----> accumulator = 3 + 103 = 106
+step 4: 
+current is 4, accumulator is 106 ----> accumulator = 4 + 106 = 110
+
+```
+
+##### complex reduce example
+```py
+from functools import reduce
+
+users = [
+    {"name": "Jeremy", "department": "IT"},
+    {"name": "Nicole", "department": "IT"},
+    {"name": "Allen", "department": "Accounting"},
+    {"name": "Sarah", "department": "Accounting"},
+    {"name": "Josh", "department": "Finance"},
+]
+
+
+def group_user(accumulator, user):
+    if user["department"] in accumulator:
+        accumulator[user["department"]]["users"].append(user["name"])
+    else:
+        accumulator[user["department"]] = {}
+        accumulator[user["department"]].update({"users": [user["name"]]})
+    return accumulator
+
+
+results = reduce(group_user, users, {})
+print("results", results)
+
+# {'IT': {'users': ['Jeremy', 'Nicole']}, 'Accounting': {'users': ['Allen', 'Sarah']}, 'Finance': {'users': ['Josh']}}
+```
+
+##### itertools.starmap
+`starmap(fn, iterable)` is very similar to `map(fn, iterable)`
+1. it unpacks every sub element of the iterable argument, and passes that to the map function
+2. useful for mapping a multiple-argument function on an iterable of iterables
+
+```py
+# using map
+l = [[1, 2], [3, 4]]
+result = map(lambda item: item[0] * item[1], l)
+print(list(result))  # [2, 12]
+
+# using starmap
+from itertools import starmap
+from operator import mul  # mul expected 2 arguments
+
+l = [[1, 2], [3, 4]]
+result1 = starmap(mul, l)
+print(list(result1))  # [2, 12]
+
+# using generator expression
+result2 = (mul(*item) for item in l)
+print(list(result2))  # [2, 12]
+```
+
+of course starmap can deal sub-element that has more than 2 elements
+```py
+# more than 2 arguments
+l = [[1, 2, 3], [10, 20, 30], [100, 200, 300]]
+result3 = starmap(lambda x, y, z: x + y + z, l)
+print(list(result3))  # [6, 60, 600]
+```
+
+##### itertools.accumulate(iterable, fn)  -> lazy iterator
+The `accumulate(iterable, fn)` is very similar to the `reduce(fn, iterable, [initialValue])` function
+
+But the differences are:
+1. accumulate returns a lazy iterator producing all the intermediate results. Reduce only returns the final results
+2. accumulate does not accept initial value
+3. note that the argument order is NOT the same!
+
+```py
+# using accumulate function
+from itertools import accumulate
+from operator import add
+
+l = [1, 2, 3, 4, 5, 6]
+results4 = accumulate(l, add)  
+
+print(results4)  # <itertools.accumulate object at 0x1057121e0>
+for num in results4:
+    print(num)  # 1 3 6 10 15 21, all the intermediate results
+```
+
+
+#### 7. zipping
+the `zip` function returns a lazy iterator
+It takes a variable number of positional arguments - each of which are iterables
+
+It returns an iterator that produces tuples containing the elements of the iterables, iterable on at a time
+
+It stops immediately once one the iterables has been exhausted, zip based on the shortest iterable
+
+```py
+result1 = zip([1, 2, 3], [10, 20], ['a', 'b', 'c', 'd'])
+print(result1)  # <zip object at 0x10a727fa0>
+print(list(result1))  # [(1, 10, 'a'), (2, 20, 'b')]
+# based on shortest iterable, which is [10, 20]
+```
+
+###### itertools.zip_longest
+Sometimes we want to zip, but based on the longest iterable
+we can optional provide a default value for the "hole"  ---> fillvalue
+
+```py
+from itertools import zip_longest
+
+# without fillvalue
+result2 = zip_longest([1, 2, 3], [10, 20], ["a", "b", "c", "d"])
+print(result2)  # <itertools.zip_longest object at 0x10d0b99b0>
+print(list(result2))
+# [(1, 10, 'a'), (2, 20, 'b'), (3, None, 'c'), (None, None, 'd')]
+
+# with fillvalue
+result3 = zip_longest([1, 2, 3], [10, 20], ["a", "b", "c", "d"], fillvalue=-1)
+print(result3)  # <itertools.zip_longest object at 0x10d0b99b0>
+print(list(result3))
+# [(1, 10, 'a'), (2, 20, 'b'), (3, -1, 'c'), (-1, -1, 'd')]
+```
+
+

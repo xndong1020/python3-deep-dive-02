@@ -26,4 +26,3 @@ for _ in range(3):
 print(iters)  # [repeat('spam', 3), repeat('spam', 3), repeat('spam', 3)]
 print(list(chain.from_iterable(iters)))
 # ['spam', 'spam', 'spam', 'spam', 'spam', 'spam', 'spam', 'spam', 'spam']
-
