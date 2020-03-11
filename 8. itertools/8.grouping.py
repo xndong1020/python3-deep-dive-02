@@ -37,7 +37,7 @@ data1 = [
 from itertools import groupby
 
 for key, grouper in groupby(data1, lambda x: x[0]):
-    print(key)  
+    print(key)
     print(list(grouper))
     # [(1, 10, 100), (1, 11, 101), (1, 12, 102)]
     # [(2, 20, 200), (2, 21, 201)]
@@ -58,9 +58,9 @@ for key, grouper in groupby(data1, lambda x: x[0]):
 # so possibly we need to sort it before groupby
 sorted_data = sorted(data1, key=lambda x: x[0])
 for key, grouper in groupby(sorted_data, lambda x: x[0]):
-    print(key)  
+    print(key)
     print(list(grouper))
-    
+
 """
 1
 [(1, 10, 100), (1, 11, 101), (1, 12, 102)]
